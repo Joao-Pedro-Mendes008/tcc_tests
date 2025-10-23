@@ -1,0 +1,29 @@
+.container {
+    margin: auto;
+    width: 40vw;
+    height: 60vh;
+    background-color: azure;
+    border-radius: 16px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+input {
+    outline: none;
+    width: 60%;
+    height: 3pc;
+    border-radius: 12px
+}
+
+button {
+    width: 25%;
+    height: 2.1pc;
+    border-radius: 12px;
+}
+
+a {
+    color: grey
+}
