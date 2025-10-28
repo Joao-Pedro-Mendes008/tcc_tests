@@ -1,11 +1,11 @@
 "use client";
 
-import { signUp } from "../../../api/user";
+import { signUpConsultorio } from "../../../api/user";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import "./signUp.css";
+import "./consulSignUp.css";
 
-export default function SignUpPage() {
+export default function SignUpConsultorioPage() {
     const router = useRouter();
 
     const [form, setForm] = useState({
@@ -13,9 +13,6 @@ export default function SignUpPage() {
         password: "",
         nome: "",
         telefone: "",
-        data_nascimento: "",
-        cpf: "",
-        genero: "",
         endereco: "",
         numero: "",
         complemento: "",
@@ -23,29 +20,13 @@ export default function SignUpPage() {
         cidade: "",
         estado: "",
         cep: "",
+        cnpj: "",
     });
 
-    const role = "paciente";
+    const role = "consultorio";
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
-    };
-
-    const validarCPF = (cpf) => {
-        cpf = cpf.replace(/[^\d]/g, "");
-        if (cpf.length !== 11) return false;
-        if (/^(\d)\1+$/.test(cpf)) return false;
-        let soma = 0,
-            resto;
-        for (let i = 1; i <= 9; i++) soma += parseInt(cpf[i - 1]) * (11 - i);
-        resto = (soma * 10) % 11;
-        if (resto === 10 || resto === 11) resto = 0;
-        if (resto !== parseInt(cpf[9])) return false;
-        soma = 0;
-        for (let i = 1; i <= 10; i++) soma += parseInt(cpf[i - 1]) * (12 - i);
-        resto = (soma * 10) % 11;
-        if (resto === 10 || resto === 11) resto = 0;
-        return resto === parseInt(cpf[10]);
     };
 
     const validarTelefone = (tel) => {
@@ -56,13 +37,39 @@ export default function SignUpPage() {
         return /^\d{5}-?\d{3}$/.test(cep);
     };
 
+    const validarCNPJ = (cnpj) => {
+        cnpj = cnpj.replace(/[^\d]+/g, "");
+        if (cnpj.length !== 14) return false;
+        if (/^(\d)\1+$/.test(cnpj)) return false;
+
+        let tamanho = cnpj.length - 2;
+        let numeros = cnpj.substring(0, tamanho);
+        let digitos = cnpj.substring(tamanho);
+        let soma = 0;
+        let pos = tamanho - 7;
+        for (let i = tamanho; i >= 1; i--) {
+            soma += numeros.charAt(tamanho - i) * pos--;
+            if (pos < 2) pos = 9;
+        }
+        let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+        if (resultado != digitos.charAt(0)) return false;
+
+        tamanho = tamanho + 1;
+        numeros = cnpj.substring(0, tamanho);
+        soma = 0;
+        pos = tamanho - 7;
+        for (let i = tamanho; i >= 1; i--) {
+            soma += numeros.charAt(tamanho - i) * pos--;
+            if (pos < 2) pos = 9;
+        }
+        resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+        if (resultado != digitos.charAt(1)) return false;
+
+        return true;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!validarCPF(form.cpf)) {
-            alert("CPF inválido.");
-            return;
-        }
 
         if (!validarTelefone(form.telefone)) {
             alert("Telefone inválido. Use o formato (XX) XXXXX-XXXX.");
@@ -74,18 +81,23 @@ export default function SignUpPage() {
             return;
         }
 
-        const result = await signUp({ ...form, role });
+        if (!validarCNPJ(form.cnpj)) {
+            alert("CNPJ inválido.");
+            return;
+        }
+
+        const result = await signUpConsultorio({ ...form, role });
 
         if (result) {
-            router.push("/verify");
+            router.push("/verifyConsultorio");
         } else {
-            alert("Erro ao cadastrar. Verifique os dados e tente novamente.");
+            alert("Erro ao cadastrar consultório. Verifique os dados e tente novamente.");
         }
     };
 
     return (
         <div className="container">
-            <div className="primaryText">Cadastro de Paciente</div>
+            <div className="primaryText">Cadastro de Consultório</div>
 
             <form onSubmit={handleSubmit} className="formContainer">
                 <input
@@ -105,10 +117,10 @@ export default function SignUpPage() {
                     required
                 />
                 <input
-                    name="name"
+                    name="nome"
                     type="text"
-                    placeholder="Nome completo:"
-                    value={form.name}
+                    placeholder="Nome do consultório:"
+                    value={form.nome}
                     onChange={handleChange}
                     required
                 />
@@ -120,32 +132,6 @@ export default function SignUpPage() {
                     onChange={handleChange}
                     required
                 />
-                <input
-                    name="data_nascimento"
-                    type="date"
-                    value={form.data_nascimento}
-                    onChange={handleChange}
-                    required
-                />
-                <input
-                    name="cpf"
-                    type="text"
-                    placeholder="CPF:"
-                    value={form.cpf}
-                    onChange={handleChange}
-                    required
-                />
-                <select
-                    name="genero"
-                    value={form.genero}
-                    onChange={handleChange}
-                    required
-                >
-                    <option value="">Selecione o gênero</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Feminino">Feminino</option>
-                    <option value="Outro">Outro</option>
-                </select>
                 <input
                     name="endereco"
                     type="text"
@@ -201,12 +187,20 @@ export default function SignUpPage() {
                     onChange={handleChange}
                     required
                 />
+                <input
+                    name="cnpj"
+                    type="text"
+                    placeholder="CNPJ:"
+                    value={form.cnpj}
+                    onChange={handleChange}
+                    required
+                />
 
                 <button type="submit">Cadastrar-se</button>
             </form>
 
             <h3>
-                Já possui cadastro? <a href="/signIn">Entrar</a>
+                Já possui cadastro? <a href="/signInConsultorio">Entrar</a>
             </h3>
         </div>
     );
