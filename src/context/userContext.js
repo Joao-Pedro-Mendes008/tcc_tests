@@ -5,24 +5,66 @@ import supabase from "../../connection";
 export const sessionContext = createContext(null);
 
 export function SessionProvider({ children }) {
-    const [session, setSession] = useState(null);
+  const [session, setSession] = useState(null);
+  const [userRole, setUserRole] = useState(null);
 
-    useEffect(() => {
-        const getSession = async () => {
-            const { data } = await supabase.auth.getSession();
-            setSession(data.session);
-        };
-        getSession();
+  useEffect(() => {
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
 
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-        });
+      if (data.session?.user) {
+        await fetchUserRole(data.session.user.email);
+      }
+    };
 
-        return () => listener.subscription.unsubscribe();
-    }, []);
-    return (
-        <sessionContext.Provider value={{session, setSession}}>
-            {children}
-        </sessionContext.Provider>
-    )
-};
+    getSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setSession(session);
+        if (session?.user) {
+          await fetchUserRole(session.user.email);
+        } else {
+          setUserRole(null);
+        }
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+
+  const fetchUserRole = async (email) => {
+
+    const { data: paciente } = await supabase
+      .from("pacientes")
+      .select("role")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (paciente?.role) {
+      setUserRole(paciente.role);
+      return;
+    }
+
+
+    const { data: consultorio } = await supabase
+      .from("consultorios")
+      .select("role")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (consultorio?.role) {
+      setUserRole(consultorio.role);
+    }
+  };
+
+  return (
+    <sessionContext.Provider value={{ session, setSession, userRole }}>
+      {children}
+    </sessionContext.Provider>
+  );
+}
+
+export const useSession = () => useContext(sessionContext);

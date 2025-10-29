@@ -105,10 +105,10 @@ export default function SignUpPage() {
                     required
                 />
                 <input
-                    name="name"
+                    name="nome"
                     type="text"
                     placeholder="Nome completo:"
-                    value={form.name}
+                    value={form.nome}
                     onChange={handleChange}
                     required
                 />

@@ -34,7 +34,7 @@ export const signUp = async ({
 
 
         const { data: createPatientData, error: createPatientError } = await supabase
-            .from("pacientes")
+            .from("usuarios")
             .insert({
                 email,
                 telefone,
@@ -49,7 +49,7 @@ export const signUp = async ({
                 cidade,
                 estado,
                 cep,
-                funcao
+                funcao: "paciente"
             })
             .select();
 
@@ -72,17 +72,17 @@ export const signUp = async ({
 
 
 export const signIn = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword(
-        email,
-        password
-    )
-    if (error) {
-        console.error(
-            "erro ao logar o usuário",
-            error.status,
-            error.message
-        )
-    }
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    console.error("Erro ao logar o usuário", error.status, error.message);
+    return { user: null, error };
+  }
+
+  return { user: data.user, error: null };
 };
 
 export const signUpConsultorio = async (
@@ -121,7 +121,7 @@ export const signUpConsultorio = async (
         data: createConsultorioData,
         error: createConsultorioDataError
     } = await supabase
-        .from('pacientes')
+        .from('consultorios')
         .insert(
             {
                 email,
@@ -144,40 +144,3 @@ export const signUpConsultorio = async (
     return createUserData;
 }
 
-export const updateAdvices = async (idPaciente, { doencas, medicamentos, outrasObservacoes }) => {
-  try {
-    const { data, error } = await supabase
-      .from('pacientes')
-      .update({
-        doencas,
-        medicamentos,
-        outras_observacoes: outrasObservacoes
-      })
-      .eq('id', idPaciente)
-      .select();
-
-    if (error) throw error;
-
-    return { data, error: null };
-  } catch (err) {
-    console.error('Erro ao atualizar observações do paciente:', err.message);
-    return { data: null, error: err };
-  }
-};
-
-export const getAdvices = async (idPaciente) => {
-  try {
-    const { data, error } = await supabase
-      .from('pacientes')
-      .select('doencas, medicamentos, outras_observacoes')
-      .eq('id', idPaciente)
-      .single(); 
-
-    if (error) throw error;
-
-    return { data, error: null };
-  } catch (err) {
-    console.error('Erro ao buscar observações do paciente:', err.message);
-    return { data: null, error: err };
-  }
-};
