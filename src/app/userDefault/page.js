@@ -2,7 +2,7 @@
 
 import { useContext, useEffect, useState } from "react";
 import { sessionContext } from "@/context/userContext";
-import { listConsultasPaciente } from "@/../api/consultas";
+import { listConsultasPaciente } from "../../../api/user";
 import "./userDefault.css";
 import Head from "next/head";
 
@@ -10,16 +10,33 @@ export default function UserHome() {
   const { session } = useContext(sessionContext);
   const [consultas, setConsultas] = useState([]);
   const [loading, setLoading] = useState(true);
+  console.log(session);
+ useEffect(() => {
+    let mounted = true;
 
-  useEffect(() => {
     const fetchConsultas = async () => {
-      if (!session?.user?.id) return;
+      if (!session?.user?.id) {
+        if (mounted) setLoading(false);
+        return;
+      }
 
-      const { data, error } = await listConsultasPaciente(session.user.id);
-      if (!error) setConsultas(data);
+      const { consultas, error } = await listConsultasPaciente(session.user.id);
+      if (!mounted) return;
+
+      if (!error) {
+        setConsultas(consultas ?? []);
+      } else {
+        console.error("Erro ao buscar consultas:", error);
+      }
+
       setLoading(false);
     };
+
     fetchConsultas();
+
+    return () => {
+      mounted = false;
+    };
   }, [session]);
 
   if (loading) return <p>Carregando consultas...</p>;
@@ -49,8 +66,8 @@ export default function UserHome() {
             >
               <p><strong>Descrição:</strong> {c.desc}</p>
               <p><strong>Data:</strong> {new Date(c.horario_marcado).toLocaleString()}</p>
-              {c.consultorios?.nome_consultorio && (
-                <p><strong>Consultório:</strong> {c.consultorios.nome_consultorio}</p>
+              {c.consultorios?.nome && (
+                <p><strong>Consultório:</strong> {c.consultorios.nome}</p>
               )}
             </div>
           ))

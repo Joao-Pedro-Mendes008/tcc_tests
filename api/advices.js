@@ -1,3 +1,5 @@
+import supabase from "../connection";
+
 export const updateAdvices = async (idPaciente, { doencas, medicamentos, outrasObservacoes }) => {
   try {
     const { data, error } = await supabase

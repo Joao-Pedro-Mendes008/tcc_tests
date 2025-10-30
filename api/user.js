@@ -15,7 +15,6 @@ export const signUp = async ({
     cidade,
     estado,
     cep,
-    funcao
 }) => {
     try {
 
@@ -23,7 +22,10 @@ export const signUp = async ({
             email,
             password,
             options: {
-                emailRedirectTo: "/signIn"
+                emailRedirectTo: "/signIn",
+                data: {
+                    role: "paciente"
+                }
             }
         });
 
@@ -72,17 +74,26 @@ export const signUp = async ({
 
 
 export const signIn = async (email, password) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
+    try {
+        if (!email || !password) {
+            return { user: null, error: new Error("Credenciais faltando") };
+        }
 
-  if (error) {
-    console.error("Erro ao logar o usuário", error.status, error.message);
-    return { user: null, error };
-  }
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
 
-  return { user: data.user, error: null };
+        if (error) {
+            console.error("Erro ao logar o usuário", error.status, error.message);
+            return { user: null, error };
+        }
+
+        return { user: data?.user ?? null, error: null };
+    } catch (err) {
+        console.error("Erro inesperado em signIn:", err);
+        return { user: null, error: err };
+    }
 };
 
 export const signUpConsultorio = async (
@@ -95,52 +106,69 @@ export const signUpConsultorio = async (
         cnpj,
     }
 ) => {
+    // Cria o usuário no supabase (autenticação) com role "consultorio"
     const {
         data: createConsultorio,
-        error: createConsultorioError
-    } = await supabase.auth.signUp(
-        {
-            email,
-            password,
-            phone,
-            role: funcao,
-            options: {
-                emailRedirectTo: "/signInConsultorio"
-            }
-        }
-    )
+        error: createConsultorioError,
+    } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            emailRedirectTo: "/signInConsultorio",
+            data: { role: "consultorio" },
+        },
+    });
+
     if (createConsultorioError) {
-        console.error(
-            "Erro ao cadastrar consultório",
-            createUserError.status,
-            createUserError.message
-        );
-        return null
-    }
-    const {
-        data: createConsultorioData,
-        error: createConsultorioDataError
-    } = await supabase
-        .from('consultorios')
-        .insert(
-            {
-                email,
-                password,
-                telefone,
-                nome,
-                endereco,
-                cnpj,
-            }
-        )
-        .select();
-    if (createConsultorioDataError) {
-        console.error(
-            "Erro ao cadastrar consultório",
-            createPatientError.status,
-            createPatientError.message
-        )
+        console.error("Erro ao cadastrar consult\u00f3rio:", createConsultorioError);
+        return null;
     }
 
-    return createUserData;
+    // Insere dados adicionais na tabela de consultorios
+    const {
+        data: createConsultorioData,
+        error: createConsultorioDataError,
+    } = await supabase
+        .from("consultorios")
+        .insert({
+            email,
+            telefone,
+            nome,
+            endereco,
+            cnpj,
+        })
+        .select();
+
+    if (createConsultorioDataError) {
+        console.error("Erro ao cadastrar consult\u00f3rio (dados):", createConsultorioDataError);
+    }
+
+    return createConsultorio;
 }
+
+export const listConsultasPaciente = async (pacienteId) => {
+    try {
+        const { data: consultas, error } = await supabase
+            .from("consultas")
+            .select(`
+        id,
+        desc,
+        horario_marcado,
+        consultorios (
+          id,
+          nome,
+          endereco,
+          telefone
+        )
+      `)
+            .eq("id_paciente", pacienteId)
+            .order("horario_marcado", { ascending: false });
+
+        if (error) throw error;
+
+        return { consultas, error: null };
+    } catch (err) {
+        return { consultas: null, error: err };
+    }
+};
 
